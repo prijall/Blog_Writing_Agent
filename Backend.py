@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 from typing import Annotated, List, TypedDict, Literal, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 
-
-from langchain_ollama import ChatOllama
+import json
+from langchain_groq import ChatGroq
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
@@ -103,7 +103,7 @@ class State(TypedDict):
 #-----------------
 #@ LLM for an agent:
 #-----------------
-llm=ChatOllama(model="deepseek-r1:7b")
+llm=ChatGroq(model="llama-3.3-70b-versatile")
 
 
 #---------------
@@ -260,15 +260,20 @@ Output must strictly match the Plan schema.
     evidence=state.get("evidence", [])
     mode=state.get("mode", "closed_book")
 
+    evidence_text = json.dumps(
+        [e.model_dump() for e in evidence][:16],
+        indent=2)
+
     plan=planner.invoke(
         [
             SystemMessage(
                 content=ORCH_SYSTEM
             ),
 
-            HumanMessage(content=(f"Topic:{state['topic']}\n",
-                                  f"Mode: {mode}\n",
-                                  f"{[e.model_dump() for e in evidence][:16]}"))
+            HumanMessage(content=(
+              f"Topic:{state['topic']}\n",
+              f"Mode: {mode}\n",
+              f"Evidence: {[e.model_dump() for e in evidence][:16]}"))
         ]
     )
 
